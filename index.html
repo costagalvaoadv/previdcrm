@@ -1,1 +1,193 @@
 <!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PrevidCRM – Costa Galvão Advocacia</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <div id="tela-login" class="tela-login">
+      <div class="login-box">
+        <div class="login-logo">
+          <span class="logo-icon">⚖️</span>
+          <h1>PrevidCRM</h1>
+          <p>Costa Galvão Advocacia</p>
+        </div>
+        <div class="form-group">
+          <label>E-mail</label>
+          <input type="email" id="login-email" placeholder="seu@email.com">
+        </div>
+        <div class="form-group">
+          <label>Senha</label>
+          <input type="password" id="login-senha" placeholder="••••••••">
+        </div>
+        <button class="btn-primary" onclick="fazerLogin()">Entrar</button>
+        <p id="login-erro" class="erro"></p>
+      </div>
+    </div>
+    <div id="tela-app" class="hidden">
+      <nav class="sidebar">
+        <div class="sidebar-logo">
+          <span>⚖️</span>
+          <div>
+            <strong>PrevidCRM</strong>
+            <small>Costa Galvão</small>
+          </div>
+        </div>
+        <div class="nav-links">
+          <a href="#" class="nav-link active" onclick="mostrarSecao('dashboard')">
+            <span>📊</span> Dashboard
+          </a>
+          <a href="#" class="nav-link" onclick="mostrarSecao('leads')">
+            <span>👥</span> Leads
+          </a>
+          <a href="#" class="nav-link" onclick="mostrarSecao('followup')">
+            <span>🔔</span> Follow up
+            <span id="badge-followup" class="badge hidden">0</span>
+          </a>
+          <a href="#" class="nav-link" onclick="mostrarSecao('novo-lead')">
+            <span>➕</span> Novo lead
+          </a>
+        </div>
+        <div class="sidebar-user">
+          <div class="user-avatar" id="user-iniciais">--</div>
+          <div>
+            <div id="user-nome">Carregando...</div>
+            <div id="user-papel" class="user-papel">--</div>
+          </div>
+          <button onclick="sair()" class="btn-sair" title="Sair">↩</button>
+        </div>
+      </nav>
+      <main class="main-content">
+        <section id="sec-dashboard" class="secao">
+          <div class="page-header">
+            <h2>Dashboard</h2>
+            <span id="data-hoje" class="data-label"></span>
+          </div>
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-label">Leads ativos</div>
+              <div class="metric-val" id="met-ativos">--</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Follow ups pendentes</div>
+              <div class="metric-val warn" id="met-followups">--</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Contratos assinados</div>
+              <div class="metric-val green" id="met-contratos">--</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Novos hoje</div>
+              <div class="metric-val" id="met-novos">--</div>
+            </div>
+          </div>
+          <div class="panels-grid">
+            <div class="panel">
+              <div class="panel-header">Leads recentes</div>
+              <div id="lista-recentes">Carregando...</div>
+            </div>
+            <div class="panel">
+              <div class="panel-header">Follow ups urgentes</div>
+              <div id="lista-urgentes">Carregando...</div>
+            </div>
+          </div>
+        </section>
+        <section id="sec-leads" class="secao hidden">
+          <div class="page-header">
+            <h2>Leads</h2>
+            <button class="btn-primary small" onclick="mostrarSecao('novo-lead')">+ Novo lead</button>
+          </div>
+          <div class="filtros">
+            <input type="text" id="filtro-busca" placeholder="Buscar por nome ou telefone..." oninput="filtrarLeads()">
+            <select id="filtro-servico" onchange="filtrarLeads()">
+              <option value="">Todos os serviços</option>
+              <option value="salario_maternidade">Salário Maternidade</option>
+              <option value="auxilio_doenca">Auxílio Doença</option>
+              <option value="bpc_loas">BPC/LOAS</option>
+              <option value="auxilio_acidente">Auxílio Acidente</option>
+            </select>
+            <select id="filtro-status" onchange="filtrarLeads()">
+              <option value="">Todos os status</option>
+              <option value="novo">Novo</option>
+              <option value="em_qualificacao">Em qualificação</option>
+              <option value="qualificado">Qualificado</option>
+              <option value="em_andamento">Em andamento</option>
+              <option value="aguardando_documento">Aguardando documento</option>
+              <option value="contrato_assinado">Contrato assinado</option>
+              <option value="enviado_operacional">Enviado ao operacional</option>
+              <option value="desqualificado">Desqualificado</option>
+            </select>
+          </div>
+          <div id="tabela-leads">Carregando...</div>
+        </section>
+        <section id="sec-followup" class="secao hidden">
+          <div class="page-header">
+            <h2>Central de follow up</h2>
+          </div>
+          <div class="reguas-grid">
+            <div class="regua-card">
+              <div class="regua-title">Padrão</div>
+              <div class="regua-desc">Aux. Doença · BPC/LOAS · Aux. Acidente</div>
+              <div class="regua-prazos">24h → 3d → 7d → 15d → 30d</div>
+            </div>
+            <div class="regua-card gestacional">
+              <div class="regua-title">Gestacional</div>
+              <div class="regua-desc">Salário Maternidade</div>
+              <div class="regua-prazos">7d → 30d → 60d → 90d → 5 meses → pré-parto</div>
+            </div>
+          </div>
+          <div id="lista-followups">Carregando...</div>
+        </section>
+        <section id="sec-novo-lead" class="secao hidden">
+          <div class="page-header">
+            <h2>Novo lead</h2>
+          </div>
+          <div class="form-card">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Nome completo *</label>
+                <input type="text" id="nl-nome" placeholder="Nome do cliente">
+              </div>
+              <div class="form-group">
+                <label>Telefone (WhatsApp) *</label>
+                <input type="text" id="nl-telefone" placeholder="(00) 00000-0000">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Serviço *</label>
+                <select id="nl-servico" onchange="verificarGestacao()">
+                  <option value="">Selecione o serviço</option>
+                  <option value="salario_maternidade">Salário Maternidade</option>
+                  <option value="auxilio_doenca">Auxílio Doença</option>
+                  <option value="bpc_loas">BPC/LOAS</option>
+                  <option value="auxilio_acidente">Auxílio Acidente</option>
+                </select>
+              </div>
+              <div class="form-group" id="grupo-gestacao" style="display:none">
+                <label>Data prevista do parto</label>
+                <input type="date" id="nl-gestacao">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Observações</label>
+              <textarea id="nl-obs" placeholder="Informações relevantes sobre o caso..." rows="3"></textarea>
+            </div>
+            <div class="form-actions">
+              <button class="btn-secondary" onclick="mostrarSecaoDir('leads')">Cancelar</button>
+              <button class="btn-primary" onclick="salvarLead()">Salvar lead</button>
+            </div>
+            <p id="nl-msg" class="mensagem"></p>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
