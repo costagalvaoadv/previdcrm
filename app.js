@@ -45,13 +45,7 @@ function mostrarSecao(id) {
   if (id === 'followup') carregarFollowUps();
   if (id === 'dashboard') carregarDashboard();
 }
-  document.querySelectorAll('.secao').forEach(s => s.classList.add('hidden'));
-  document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
-  document.getElementById('sec-' + id).classList.remove('hidden');
-  const link = document.querySelector(`.nav-link[onclick*="${id}"]`);
-  if (link) link.classList.add('active');
-}
-
+ 
 function mostrarSecaoDir(id) {
   document.querySelectorAll('.secao').forEach(s => s.classList.add('hidden'));
   document.getElementById('sec-' + id).classList.remove('hidden');
