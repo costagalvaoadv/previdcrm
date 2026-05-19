@@ -27,6 +27,7 @@ async function iniciarApp() {
   await carregarDashboard();
   await carregarLeads();
   await carregarFollowUps();
+  await carregarKanban();
 }
 
 function iniciais(nome) {
