@@ -129,7 +129,7 @@ function filtrarLeads() {
 }
 
 async function carregarFollowUps() {
-  const { data } = await db.from('follow_ups').select('*, leads(nome, servico)').eq('status','pendente').order('data_prevista');
+  const { data } = await db.from('follow_ups').select('*, leads(nome, servico)').in('status',['pendente','atrasado']).order('data_prevista');
   const lista = document.getElementById('lista-followups');
   if (!data || !data.length) {
     lista.innerHTML = '<div style="padding:20px;text-align:center;color:#888;background:#fff;border-radius:10px">Nenhum follow up pendente</div>';
