@@ -353,3 +353,61 @@ db.auth.onAuthStateChange((event, session) => {
     });
   }
 });
+const KANBAN_COLUNAS = [
+  { id: 'novo', label: 'Novo', cor: '#185FA5', bg: '#E6F1FB' },
+  { id: 'em_qualificacao', label: 'Em qualificação', cor: '#633806', bg: '#FAEEDA' },
+  { id: 'qualificado', label: 'Qualificado', cor: '#27500A', bg: '#EAF3DE' },
+  { id: 'em_andamento', label: 'Em andamento', cor: '#3C3489', bg: '#EEEDFE' },
+  { id: 'aguardando_documento', label: 'Aguard. documento', cor: '#633806', bg: '#FAEEDA' },
+  { id: 'contrato_assinado', label: 'Contrato assinado', cor: '#085041', bg: '#E1F5EE' },
+  { id: 'enviado_operacional', label: 'Enviado op.', cor: '#085041', bg: '#EAF3DE' },
+  { id: 'desqualificado', label: 'Desqualificado', cor: '#A32D2D', bg: '#FCEBEB' }
+];
+
+async function carregarKanban() {
+  const { data: leads } = await db.from('leads').select('*, perfis(nome)').order('criado_em', { ascending: false });
+  const board = document.getElementById('kanban-board');
+  if (!board) return;
+  board.innerHTML = '';
+  KANBAN_COLUNAS.forEach(col => {
+    const cards = (leads || []).filter(l => l.status === col.id);
+    const colEl = document.createElement('div');
+    colEl.className = 'kanban-col';
+    colEl.dataset.status = col.id;
+    colEl.innerHTML = `
+      <div class="kanban-col-header" style="background:${col.bg};color:${col.cor}">
+        <span>${col.label}</span>
+        <span class="kanban-count">${cards.length}</span>
+      </div>
+      <div class="kanban-col-body" id="col-${col.id}"></div>`;
+    board.appendChild(colEl);
+    const body = colEl.querySelector('.kanban-col-body');
+    cards.forEach(lead => {
+      const card = document.createElement('div');
+      card.className = 'kanban-card';
+      card.draggable = true;
+      card.dataset.id = lead.id;
+      card.innerHTML = `
+        <div class="kanban-card-nome">${lead.nome}</div>
+        <div class="kanban-card-sub">${labelServico(lead.servico)}</div>
+        <div class="kanban-card-sub" style="margin-top:4px">${lead.perfis?.nome || '—'}</div>`;
+      card.addEventListener('click', () => abrirLead(lead.id));
+      card.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('leadId', lead.id);
+        card.classList.add('dragging');
+      });
+      card.addEventListener('dragend', () => card.classList.remove('dragging'));
+      body.appendChild(card);
+    });
+    body.addEventListener('dragover', e => { e.preventDefault(); body.classList.add('drag-over'); });
+    body.addEventListener('dragleave', () => body.classList.remove('drag-over'));
+    body.addEventListener('drop', async e => {
+      e.preventDefault();
+      body.classList.remove('drag-over');
+      const leadId = e.dataTransfer.getData('leadId');
+      await db.from('leads').update({ status: col.id }).eq('id', leadId);
+      await carregarKanban();
+      await carregarDashboard();
+    });
+  });
+}
