@@ -45,7 +45,7 @@ function mostrarSecao(id) {
   if (id === 'followup') carregarFollowUps();
   if (id === 'dashboard') carregarDashboard();
 }
- 
+
 function mostrarSecaoDir(id) {
   document.querySelectorAll('.secao').forEach(s => s.classList.add('hidden'));
   document.getElementById('sec-' + id).classList.remove('hidden');
@@ -162,12 +162,70 @@ async function carregarFollowUps() {
   }).join('')}</div>`;
 }
 
+const KANBAN_COLUNAS = [
+  { id: 'novo', label: 'Novo', cor: '#185FA5', bg: '#E6F1FB' },
+  { id: 'em_qualificacao', label: 'Em qualificação', cor: '#633806', bg: '#FAEEDA' },
+  { id: 'qualificado', label: 'Qualificado', cor: '#27500A', bg: '#EAF3DE' },
+  { id: 'em_andamento', label: 'Em andamento', cor: '#3C3489', bg: '#EEEDFE' },
+  { id: 'aguardando_documento', label: 'Aguard. documento', cor: '#633806', bg: '#FAEEDA' },
+  { id: 'contrato_assinado', label: 'Contrato assinado', cor: '#085041', bg: '#E1F5EE' },
+  { id: 'enviado_operacional', label: 'Enviado op.', cor: '#085041', bg: '#EAF3DE' },
+  { id: 'desqualificado', label: 'Desqualificado', cor: '#A32D2D', bg: '#FCEBEB' }
+];
+
+async function carregarKanban() {
+  const { data: leads } = await db.from('leads').select('*, perfis(nome)').order('criado_em', { ascending: false });
+  const board = document.getElementById('kanban-board');
+  if (!board) return;
+  board.innerHTML = '';
+  KANBAN_COLUNAS.forEach(col => {
+    const cards = (leads || []).filter(l => l.status === col.id);
+    const colEl = document.createElement('div');
+    colEl.className = 'kanban-col';
+    colEl.dataset.status = col.id;
+    colEl.innerHTML = `
+      <div class="kanban-col-header" style="background:${col.bg};color:${col.cor}">
+        <span>${col.label}</span>
+        <span class="kanban-count">${cards.length}</span>
+      </div>
+      <div class="kanban-col-body" id="col-${col.id}"></div>`;
+    board.appendChild(colEl);
+    const body = colEl.querySelector('.kanban-col-body');
+    cards.forEach(lead => {
+      const card = document.createElement('div');
+      card.className = 'kanban-card';
+      card.draggable = true;
+      card.dataset.id = lead.id;
+      card.innerHTML = `
+        <div class="kanban-card-nome">${lead.nome}</div>
+        <div class="kanban-card-sub">${labelServico(lead.servico)}</div>
+        <div class="kanban-card-sub" style="margin-top:4px">${lead.perfis?.nome || '—'}</div>`;
+      card.addEventListener('click', () => abrirLead(lead.id));
+      card.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('leadId', lead.id);
+        card.classList.add('dragging');
+      });
+      card.addEventListener('dragend', () => card.classList.remove('dragging'));
+      body.appendChild(card);
+    });
+    body.addEventListener('dragover', e => { e.preventDefault(); body.classList.add('drag-over'); });
+    body.addEventListener('dragleave', () => body.classList.remove('drag-over'));
+    body.addEventListener('drop', async e => {
+      e.preventDefault();
+      body.classList.remove('drag-over');
+      const leadId = e.dataTransfer.getData('leadId');
+      await db.from('leads').update({ status: col.id }).eq('id', leadId);
+      await carregarKanban();
+      await carregarDashboard();
+    });
+  });
+}
+
 async function abrirLead(id) {
   const { data: lead } = await db.from('leads').select('*, perfis(nome)').eq('id', id).single();
   const { data: fups } = await db.from('follow_ups').select('*').eq('lead_id', id).order('data_prevista');
   const { data: obs } = await db.from('mensagens').select('*').eq('lead_id', id).order('enviado_em');
   leadAtual = lead;
-
   const secao = document.getElementById('sec-detalhe');
   secao.innerHTML = `
     <div class="page-header">
@@ -180,7 +238,6 @@ async function abrirLead(id) {
         <button class="btn-secondary" onclick="abrirWhatsApp('${lead.telefone}')">💬 WhatsApp</button>
       </div>
     </div>
-
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
       <div class="panel">
         <div class="panel-header">Dados do lead</div>
@@ -192,18 +249,16 @@ async function abrirLead(id) {
           ${lead.data_gestacao ? `<div><span style="font-size:11px;color:#888">Previsão do parto</span><div style="font-size:13px">${new Date(lead.data_gestacao).toLocaleDateString('pt-BR')}</div></div>` : ''}
         </div>
       </div>
-
       <div class="panel">
         <div class="panel-header">Alterar status</div>
         <div style="padding:16px;display:flex;flex-direction:column;gap:8px">
           ${['novo','em_qualificacao','qualificado','em_andamento','aguardando_documento','contrato_assinado','enviado_operacional','desqualificado'].map(s => `
-            <button onclick="alterarStatus('${lead.id}','${s}')" class="btn-status ${lead.status === s ? 'ativo' : ''}" style="text-align:left;padding:7px 12px;border-radius:8px;border:1px solid ${lead.status === s ? '#534AB7' : '#eee'};background:${lead.status === s ? '#EEEDFE' : '#fff'};color:${lead.status === s ? '#534AB7' : '#555'};cursor:pointer;font-size:12px">
+            <button onclick="alterarStatus('${lead.id}','${s}')" style="text-align:left;padding:7px 12px;border-radius:8px;border:1px solid ${lead.status === s ? '#534AB7' : '#eee'};background:${lead.status === s ? '#EEEDFE' : '#fff'};color:${lead.status === s ? '#534AB7' : '#555'};cursor:pointer;font-size:12px">
               ${lead.status === s ? '● ' : '○ '} ${labelStatus(s)}
             </button>`).join('')}
         </div>
       </div>
     </div>
-
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
       <div class="panel">
         <div class="panel-header">Follow ups</div>
@@ -223,7 +278,6 @@ async function abrirLead(id) {
           </div>`;
         }).join('') : '<div style="padding:16px;color:#888;font-size:12px">Nenhum follow up</div>'}</div>
       </div>
-
       <div class="panel">
         <div class="panel-header">Observações</div>
         <div style="padding:16px">
@@ -241,7 +295,6 @@ async function abrirLead(id) {
         </div>
       </div>
     </div>`;
-
   mostrarSecaoDir('detalhe');
 }
 
@@ -358,61 +411,3 @@ db.auth.onAuthStateChange((event, session) => {
     });
   }
 });
-const KANBAN_COLUNAS = [
-  { id: 'novo', label: 'Novo', cor: '#185FA5', bg: '#E6F1FB' },
-  { id: 'em_qualificacao', label: 'Em qualificação', cor: '#633806', bg: '#FAEEDA' },
-  { id: 'qualificado', label: 'Qualificado', cor: '#27500A', bg: '#EAF3DE' },
-  { id: 'em_andamento', label: 'Em andamento', cor: '#3C3489', bg: '#EEEDFE' },
-  { id: 'aguardando_documento', label: 'Aguard. documento', cor: '#633806', bg: '#FAEEDA' },
-  { id: 'contrato_assinado', label: 'Contrato assinado', cor: '#085041', bg: '#E1F5EE' },
-  { id: 'enviado_operacional', label: 'Enviado op.', cor: '#085041', bg: '#EAF3DE' },
-  { id: 'desqualificado', label: 'Desqualificado', cor: '#A32D2D', bg: '#FCEBEB' }
-];
-
-async function carregarKanban() {
-  const { data: leads } = await db.from('leads').select('*, perfis(nome)').order('criado_em', { ascending: false });
-  const board = document.getElementById('kanban-board');
-  if (!board) return;
-  board.innerHTML = '';
-  KANBAN_COLUNAS.forEach(col => {
-    const cards = (leads || []).filter(l => l.status === col.id);
-    const colEl = document.createElement('div');
-    colEl.className = 'kanban-col';
-    colEl.dataset.status = col.id;
-    colEl.innerHTML = `
-      <div class="kanban-col-header" style="background:${col.bg};color:${col.cor}">
-        <span>${col.label}</span>
-        <span class="kanban-count">${cards.length}</span>
-      </div>
-      <div class="kanban-col-body" id="col-${col.id}"></div>`;
-    board.appendChild(colEl);
-    const body = colEl.querySelector('.kanban-col-body');
-    cards.forEach(lead => {
-      const card = document.createElement('div');
-      card.className = 'kanban-card';
-      card.draggable = true;
-      card.dataset.id = lead.id;
-      card.innerHTML = `
-        <div class="kanban-card-nome">${lead.nome}</div>
-        <div class="kanban-card-sub">${labelServico(lead.servico)}</div>
-        <div class="kanban-card-sub" style="margin-top:4px">${lead.perfis?.nome || '—'}</div>`;
-      card.addEventListener('click', () => abrirLead(lead.id));
-      card.addEventListener('dragstart', e => {
-        e.dataTransfer.setData('leadId', lead.id);
-        card.classList.add('dragging');
-      });
-      card.addEventListener('dragend', () => card.classList.remove('dragging'));
-      body.appendChild(card);
-    });
-    body.addEventListener('dragover', e => { e.preventDefault(); body.classList.add('drag-over'); });
-    body.addEventListener('dragleave', () => body.classList.remove('drag-over'));
-    body.addEventListener('drop', async e => {
-      e.preventDefault();
-      body.classList.remove('drag-over');
-      const leadId = e.dataTransfer.getData('leadId');
-      await db.from('leads').update({ status: col.id }).eq('id', leadId);
-      await carregarKanban();
-      await carregarDashboard();
-    });
-  });
-}
