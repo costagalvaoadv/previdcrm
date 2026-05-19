@@ -97,3 +97,14 @@ tr:hover td{background:#fafafa}
 .lead-nome{font-size:13px;font-weight:500}
 .lead-sub{font-size:11px;color:#888;margin-top:2px}
 @media(max-width:768px){.sidebar{width:100%;height:auto;position:relative}.main-content{margin-left:0}.metrics-grid{grid-template-columns:1fr 1fr}.panels-grid{grid-template-columns:1fr}.form-row{grid-template-columns:1fr}}
+.kanban-board{display:flex;gap:12px;overflow-x:auto;padding-bottom:16px;min-height:70vh}
+.kanban-col{min-width:220px;max-width:220px;background:#f4f6f9;border-radius:10px;display:flex;flex-direction:column}
+.kanban-col-header{padding:10px 12px;border-radius:10px 10px 0 0;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:space-between}
+.kanban-col-body{padding:8px;flex:1;min-height:100px;display:flex;flex-direction:column;gap:6px}
+.kanban-card{background:#fff;border-radius:8px;padding:10px;border:1px solid #eee;cursor:pointer;transition:box-shadow 0.15s}
+.kanban-card:hover{box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+.kanban-card.dragging{opacity:0.5}
+.kanban-col-body.drag-over{background:#e8e8f0}
+.kanban-card-nome{font-size:12px;font-weight:500;margin-bottom:4px}
+.kanban-card-sub{font-size:11px;color:#888}
+.kanban-count{background:#ffffff50;border-radius:100px;padding:1px 7px;font-size:11px}
