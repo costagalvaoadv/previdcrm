@@ -435,7 +435,8 @@ async function carregarGestor() {
       <div class="panel" style="margin-bottom:16px">
         <div class="panel-header" style="display:flex;align-items:center;gap:10px">
           <div class="user-avatar" style="width:32px;height:32px;border-radius:50%;background:#534AB7;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff">${iniciais(p.nome)}</div>
-          <span>${p.nome}</span>
+         <span id="nome-${p.id}">${p.nome}</span>
+<button onclick="editarNome('${p.id}','${p.nome}')" style="font-size:10px;padding:2px 8px;border-radius:6px;border:1px solid #ddd;background:#fff;color:#555;cursor:pointer;margin-left:8px">✏️ Editar</button>
           <span style="font-size:11px;color:#888;margin-left:auto">${p.email}</span>
         </div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:16px">
@@ -484,4 +485,15 @@ async function carregarGestor() {
     </div>
     <h3 style="font-size:14px;font-weight:600;margin-bottom:12px;color:#1a1a2e">Desempenho por atendente</h3>
     ${cards.join('')}`;
+}
+async function editarNome(id, nomeAtual) {
+  const novo = prompt('Novo nome para a atendente:', nomeAtual);
+  if (!novo || novo.trim() === nomeAtual) return;
+  const { error } = await db.from('perfis').update({ nome: novo.trim() }).eq('id', id);
+  if (!error) {
+    document.getElementById('nome-' + id).textContent = novo.trim();
+    alert('Nome atualizado com sucesso!');
+  } else {
+    alert('Erro ao atualizar. Tente novamente.');
+  }
 }
