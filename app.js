@@ -44,6 +44,7 @@ function mostrarSecao(id) {
   if (id === 'leads') carregarLeads();
   if (id === 'followup') carregarFollowUps();
   if (id === 'dashboard') carregarDashboard();
+  if (id === 'gestor') carregarGestor();
 }
 
 function mostrarSecaoDir(id) {
@@ -411,3 +412,76 @@ db.auth.onAuthStateChange((event, session) => {
     });
   }
 });
+async function carregarGestor() {
+  if (usuarioAtual?.papel !== 'gestor') {
+    document.getElementById('gestor-content').innerHTML = '<div style="padding:20px;color:#888">Acesso restrito ao gestor.</div>';
+    return;
+  }
+  const { data: perfis } = await db.from('perfis').select('*').eq('papel', 'atendente');
+  const { data: leads } = await db.from('leads').select('*');
+  const { data: fups } = await db.from('follow_ups').select('*');
+  if (!perfis || !leads) return;
+  const content = document.getElementById('gestor-content');
+  const cards = perfis.map(p => {
+    const meusLeads = leads.filter(l => l.atendente_id === p.id);
+    const ativos = meusLeads.filter(l => !['desqualificado','enviado_operacional'].includes(l.status));
+    const contratos = meusLeads.filter(l => l.status === 'contrato_assinado' || l.status === 'enviado_operacional');
+    const meusFups = fups ? fups.filter(f => meusLeads.some(l => l.id === f.lead_id)) : [];
+    const fupsRealizados = meusFups.filter(f => f.status === 'realizado');
+    const fupsPendentes = meusFups.filter(f => f.status === 'pendente' && new Date(f.data_prevista) < new Date());
+    const conversao = meusLeads.length > 0 ? Math.round((contratos.length / meusLeads.length) * 100) : 0;
+    const cumprimento = meusFups.length > 0 ? Math.round((fupsRealizados.length / meusFups.length) * 100) : 0;
+    return `
+      <div class="panel" style="margin-bottom:16px">
+        <div class="panel-header" style="display:flex;align-items:center;gap:10px">
+          <div class="user-avatar" style="width:32px;height:32px;border-radius:50%;background:#534AB7;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff">${iniciais(p.nome)}</div>
+          <span>${p.nome}</span>
+          <span style="font-size:11px;color:#888;margin-left:auto">${p.email}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:16px">
+          <div style="text-align:center;padding:12px;background:#f9f9f9;border-radius:8px">
+            <div style="font-size:22px;font-weight:600;color:#534AB7">${meusLeads.length}</div>
+            <div style="font-size:11px;color:#888;margin-top:4px">Total de leads</div>
+          </div>
+          <div style="text-align:center;padding:12px;background:#f9f9f9;border-radius:8px">
+            <div style="font-size:22px;font-weight:600;color:#e67e22">${ativos.length}</div>
+            <div style="font-size:11px;color:#888;margin-top:4px">Leads ativos</div>
+          </div>
+          <div style="text-align:center;padding:12px;background:#f9f9f9;border-radius:8px">
+            <div style="font-size:22px;font-weight:600;color:#27ae60">${conversao}%</div>
+            <div style="font-size:11px;color:#888;margin-top:4px">Taxa de conversão</div>
+          </div>
+          <div style="text-align:center;padding:12px;background:#f9f9f9;border-radius:8px">
+            <div style="font-size:22px;font-weight:600;color:${fupsPendentes.length > 0 ? '#e74c3c' : '#27ae60'}">${cumprimento}%</div>
+            <div style="font-size:11px;color:#888;margin-top:4px">Follow ups em dia</div>
+          </div>
+        </div>
+        <div style="padding:0 16px 16px;display:flex;gap:8px;flex-wrap:wrap">
+          ${['novo','em_qualificacao','qualificado','em_andamento','aguardando_documento','contrato_assinado','enviado_operacional','desqualificado'].map(s => {
+            const qtd = meusLeads.filter(l => l.status === s).length;
+            return qtd > 0 ? `${badgeStatus(s)} <span style="font-size:11px;color:#888">×${qtd}</span>` : '';
+          }).filter(Boolean).join(' ')}
+        </div>
+      </div>`;
+  });
+  const totalLeads = leads.length;
+  const totalContratos = leads.filter(l => l.status === 'contrato_assinado' || l.status === 'enviado_operacional').length;
+  const totalConversao = totalLeads > 0 ? Math.round((totalContratos / totalLeads) * 100) : 0;
+  content.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+      <div class="metric-card">
+        <div class="metric-label">Total de leads</div>
+        <div class="metric-val">${totalLeads}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Contratos fechados</div>
+        <div class="metric-val green">${totalContratos}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Conversão geral</div>
+        <div class="metric-val">${totalConversao}%</div>
+      </div>
+    </div>
+    <h3 style="font-size:14px;font-weight:600;margin-bottom:12px;color:#1a1a2e">Desempenho por atendente</h3>
+    ${cards.join('')}`;
+}
