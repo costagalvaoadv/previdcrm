@@ -44,12 +44,12 @@
           <a href="#" class="nav-link" onclick="mostrarSecao('leads')">
             <span>👥</span> Leads
           </a>
+          <a href="#" class="nav-link" onclick="mostrarSecao('kanban')">
+            <span>📋</span> Kanban
+          </a>
           <a href="#" class="nav-link" onclick="mostrarSecao('followup')">
             <span>🔔</span> Follow up
             <span id="badge-followup" class="badge hidden">0</span>
-          </a>
-         <a href="#" class="nav-link" onclick="mostrarSecao('kanban')">
-            <span>📋</span> Kanban
           </a>
           <a href="#" class="nav-link" onclick="mostrarSecao('novo-lead')">
             <span>➕</span> Novo lead
@@ -127,6 +127,12 @@
           </div>
           <div id="tabela-leads">Carregando...</div>
         </section>
+        <section id="sec-kanban" class="secao hidden">
+          <div class="page-header">
+            <h2>Pipeline Kanban</h2>
+          </div>
+          <div id="kanban-board" class="kanban-board"></div>
+        </section>
         <section id="sec-followup" class="secao hidden">
           <div class="page-header">
             <h2>Central de follow up</h2>
@@ -186,12 +192,6 @@
             </div>
             <p id="nl-msg" class="mensagem"></p>
           </div>
-        </section>
-          <section id="sec-kanban" class="secao hidden">
-          <div class="page-header">
-            <h2>Pipeline Kanban</h2>
-          </div>
-          <div id="kanban-board" class="kanban-board"></div>
         </section>
         <section id="sec-detalhe" class="secao hidden">
         </section>
